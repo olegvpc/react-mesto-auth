@@ -1,0 +1,12 @@
+.header__navs_closed {
+
+}
+
+@media screen and (max-width: 568px) {
+  .add-wrapped-class .header__navs_closed .header__navs {
+    max-height: 0;
+    overflow: hidden;
+    border: none;
+    margin: 0;
+  }
+}

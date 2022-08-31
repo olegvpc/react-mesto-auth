@@ -1,0 +1,12 @@
+.header__navs_email {
+    font-weight: 500;
+    margin-right: 24px;
+}
+
+@media screen and (max-width: 568px) {
+  .add-wrapped-class .header__navs_email {
+    margin-right: 0;
+    margin-bottom: 18px;
+    align-self: center;
+  }
+}

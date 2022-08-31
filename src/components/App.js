@@ -1,6 +1,5 @@
 import {useEffect, useState} from "react";
-import Header from "./Header.js"
-import Footer from "./Footer.js";
+import { Route, Redirect, Switch, useHistory } from 'react-router-dom';
 import Main from "./Main.js";
 import ImagePopup from "./ImagePopup.js";
 import EditProfilePopup from "./EditProfilePopup";
@@ -9,6 +8,11 @@ import AddPlacePopup from "./AddPlacePopup";
 import api from "../utils/api";
 import { CurrentUserContext } from "../contexts/CurrentUserContext";
 import ConfirmationPopup from "./ConfirmationPopup";
+import Login from "./Login";
+import Register from "./Register";
+import InfoTooltip from "./InfoTooltip";
+import ProtectedRoute from "./ProtectedRoute";
+import { register, authorize, verifyToken } from '../utils/auth';
 
 function App() {
     // Стейты для popup (Принимает состояние - открыт-true/не открыт-false)
@@ -23,7 +27,38 @@ function App() {
     const [selectedCard, setSelectedCard] = useState({})
     // украшение - изменение визуализации при процессе загрузки API
     const [isLoading, setIsLoading] = useState(false)
+    // state авторизации пользователя (вошел в систему или нет)
+    const [loggedIn, setLoggedIn] = useState(false);
+    // state состояния открытия поп-апа с оповещением при авторизации
+    const [isInfoTooltipOpen, setIsInfoTooltipOpen] = useState(false);
+    // state сообщения об успешной/неудачной авторизации
+    const [isCreatedUser, setIsCreatedUser] = useState(false);
+    // state получения почты пользователя, для отображения в хедере
+    const [userEmailOnHeader, setUserEmailOnHeader] = useState('');
+    const history = useHistory();
+    // ------- закрытие всех popup при Esc или клике на popup---------
+    const isOpen = isEditAvatarPopupOpen || isEditProfilePopupOpen || isAddPlacePopupOpen || isImagePopupOpen || isConfirmDeletePopupOpen || isInfoTooltipOpen
 
+    useEffect(() => {
+        function closeByEscapeOrOutPopup(evt) {
+            if(evt.key === 'Escape' || evt.target.classList.contains("popup")) {
+                closeAllPopups();
+            }
+        }
+        if(isOpen) {
+            document.addEventListener('keydown', closeByEscapeOrOutPopup);
+            document.addEventListener("mousedown", closeByEscapeOrOutPopup);
+            return () => {
+                document.removeEventListener('keydown', closeByEscapeOrOutPopup);
+                document.addEventListener("mousedown", closeByEscapeOrOutPopup)
+            }
+        }
+    }, [isOpen])
+
+    // проверка наличия токена юзера в localStorage - если есть, то провести аутентификация юзера
+    useEffect(() => {
+    checkToken();
+    })
 
     useEffect(() => {
         Promise.all([api.getUserInfo(), api.getInitialCards()])
@@ -139,45 +174,106 @@ function App() {
       setIsAddPlacePopupOpen(false);
       setIsEditAvatarPopupOpen(false);
       setIsImagePopupOpen(false);
-      setIsConfirmDeletePopupOpen(false)
+      setIsConfirmDeletePopupOpen(false);
+      setIsInfoTooltipOpen(false)
       // setSelectedCard({}); // пока не разобрался - но при убирании popup картинка исчезает быстрее креста popupa
     }
-    // ------- закрытие всех popup при Esc или клике на popup---------
-    const isOpen = isEditAvatarPopupOpen || isEditProfilePopupOpen || isAddPlacePopupOpen || isImagePopupOpen || isConfirmDeletePopupOpen
 
-    useEffect(() => {
-        function closeByEscapeOrOutPopup(evt) {
-            if(evt.key === 'Escape' || evt.target.classList.contains("popup")) {
-                closeAllPopups();
+    function onSignOut() {
+        localStorage.removeItem('jwt');
+        setLoggedIn(false);
+        history.push('/sign-in');
+
+    }
+    function onRegister(email, password) {
+        register(password, email)
+          .then((res) => {
+            setIsInfoTooltipOpen(true);
+            if(res) {
+              // console.log(res) // data: {_id: "630db9486390a400146977fa", email: "ol-3@ya.ru"}
+              setIsCreatedUser(true);
+              history.push('/sign-in');
             }
+          })
+          .catch(() => {
+            setIsInfoTooltipOpen(true);
+            setIsCreatedUser(false);
+          });
+    }
+  function onLogin(email, password) {
+    authorize(password, email)
+      .then((res) => {
+        if(res) {
+          // console.log(res) // {token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2M…wMjV9.9pPYi85hDTK9YjUAKDzJysGnSO1LAzQp8Vsql244vr4'}
+          setLoggedIn(true);
+          setUserEmailOnHeader(email);
+          history.push('/');
+          localStorage.setItem('jwt', res.token);
         }
-        if(isOpen) {
-            document.addEventListener('keydown', closeByEscapeOrOutPopup);
-            document.addEventListener("mousedown", closeByEscapeOrOutPopup);
-            return () => {
-                document.removeEventListener('keydown', closeByEscapeOrOutPopup);
-                document.addEventListener("mousedown", closeByEscapeOrOutPopup)
-            }
-        }
-    }, [isOpen])
+      })
+      .catch(() => {
+        setIsInfoTooltipOpen(true);
+        setIsCreatedUser(false);
+      });
+  }
+
+  function checkToken() {
+    const token = localStorage.getItem('jwt');
+    if(token) {
+      verifyToken(token)
+      .then((res) => {
+        if(res) {
+          setUserEmailOnHeader(res.data.email)
+        };
+        setLoggedIn(true);
+        history.push('/');
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+    }
+  }
 
   return (
     <CurrentUserContext.Provider value={currentUser}>
         <div className="page">
           <div className="page__content">
-            <Header />
-            <Main
-              onEditProfile={handleEditProfileClick}
-              onEditAvatar={handleEditAvatarClick}
-              onAddPlace={handleAddPlaceClick}
-              onCardClick={handleCardClick}
-              onConfirm={handleDeleteClick}
-              cards={cards}
-              onCardLike={handleCardLike}
-              // onCardDelete={handleCardDelete}
+            <Switch>
+              <ProtectedRoute
+                onEditProfile={handleEditProfileClick}
+                onEditAvatar={handleEditAvatarClick}
+                onAddPlace={handleAddPlaceClick}
+                onCardClick={handleCardClick}
+                onConfirm={handleDeleteClick}
+                cards={cards}
+                onCardLike={handleCardLike}
+                component={Main}
+                exact path="/"
+                loggedIn={loggedIn}
+                userEmailOnHeader={userEmailOnHeader}
+                onSignOut={onSignOut}
+              />
 
-            />
-            <Footer />
+              {/*<ProtectedRoute*/}
+              {/*  component={Footer}*/}
+              {/*  exact path="/"*/}
+              {/*  loggedIn={loggedIn}*/}
+              {/*/>*/}
+              <Route path="/sign-in">
+                <Login
+                  onLogin={onLogin}
+                />
+              </Route>
+              <Route path="/sign-up">
+                <Register
+                  onRegister={onRegister}
+                />
+              </Route>
+              <Route exect path="/">
+                {loggedIn ? <Redirect to="/" /> : <Redirect to="/sign-up"/>}
+              </Route>
+
+            </Switch>
             <EditProfilePopup
                 isOpen={isEditProfilePopupOpen}
                 onClose={closeAllPopups}
@@ -202,6 +298,11 @@ function App() {
                 onClose={closeAllPopups}
                 card={selectedCard}
                 onCardDelete={handleCardDelete}/>
+            <InfoTooltip
+                isOpen={isInfoTooltipOpen}
+                onClose={closeAllPopups}
+                isCreatedUser={isCreatedUser}
+            />
 
           </div>
           {/*Конец блока container*/}

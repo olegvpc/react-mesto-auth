@@ -1,6 +1,7 @@
 .header__logo {
     max-width: 142px;
     min-height: 33px;
+    /*border: 1px solid greenyellow;*/
   }
 
   @media screen and (max-width: 984px) {
@@ -14,5 +15,6 @@
       max-width: 104px;
       min-height: 24px;
       padding-left: 27px;
+      align-self: flex-start;
     }
   }

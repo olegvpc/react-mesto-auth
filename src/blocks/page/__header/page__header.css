@@ -8,7 +8,9 @@
 }
 
 @media screen and (max-width: 568px) {
-  .page__header {
-    padding: 28px 0 32px;
+  .add-wrapped-class .page__header {
+    padding: 32px 0 32px;
+    flex-direction: column-reverse;
+    align-items: center;
   }
 }
