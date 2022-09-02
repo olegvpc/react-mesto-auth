@@ -1,6 +1,8 @@
 import {useEffect, useState} from "react";
-import { Route, Redirect, Switch, useHistory } from 'react-router-dom';
+import { Route, Switch, useHistory } from 'react-router-dom';
 import Main from "./Main.js";
+import Header from "./Header";
+import Footer from "./Footer";
 import ImagePopup from "./ImagePopup.js";
 import EditProfilePopup from "./EditProfilePopup";
 import EditAvatarPopup from "./EditAvatarPopup";
@@ -57,19 +59,24 @@ function App() {
 
     // проверка наличия токена юзера в localStorage - если есть, то провести аутентификация юзера
     useEffect(() => {
-    checkToken();
-    })
-
-    useEffect(() => {
-        Promise.all([api.getUserInfo(), api.getInitialCards()])
-            .then(([userData, cardsData]) => {
-                setCurrentUser(userData);
-                setCards(cardsData);
-            })
-            .catch((err) => {
-                console.log(`ошибка получения данных по API при первичном обращении за карточками и юзером ${err}`);
-            })
+        // console.count("RENDER - TOKEN") // пустой массив зависимостей - Render только при монтировании
+        checkToken();
     }, [])
+
+    // если пользователь авторизован, загрузить его данные и корточки с сервера
+    useEffect(() => {
+        if (loggedIn) {
+            Promise.all([api.getUserInfo(), api.getInitialCards()])
+                .then(([userData, cardsData]) => {
+                    setCurrentUser(userData);
+                    setCards(cardsData);
+                })
+                .catch((err) => {
+                    console.log(`ошибка получения данных по API при первичном обращении за карточками и юзером ${err}`);
+                })
+        }
+
+    }, [loggedIn])
 
     function handleCardLike(card) {
         // Снова проверяем, есть ли уже лайк на этой карточке
@@ -238,6 +245,11 @@ function App() {
     <CurrentUserContext.Provider value={currentUser}>
         <div className="page">
           <div className="page__content">
+            <Header
+              userEmailOnHeader={userEmailOnHeader}
+              onSignOut={onSignOut}
+              loggedIn={loggedIn}
+            />
             <Switch>
               <ProtectedRoute
                 onEditProfile={handleEditProfileClick}
@@ -250,15 +262,8 @@ function App() {
                 component={Main}
                 exact path="/"
                 loggedIn={loggedIn}
-                userEmailOnHeader={userEmailOnHeader}
-                onSignOut={onSignOut}
-              />
 
-              {/*<ProtectedRoute*/}
-              {/*  component={Footer}*/}
-              {/*  exact path="/"*/}
-              {/*  loggedIn={loggedIn}*/}
-              {/*/>*/}
+              />
               <Route path="/sign-in">
                 <Login
                   onLogin={onLogin}
@@ -269,11 +274,12 @@ function App() {
                   onRegister={onRegister}
                 />
               </Route>
-              <Route exect path="/">
-                {loggedIn ? <Redirect to="/" /> : <Redirect to="/sign-up"/>}
-              </Route>
-
             </Switch>
+            <ProtectedRoute
+                component={Footer}
+                exact path="/"
+                loggedIn={loggedIn}
+              />
             <EditProfilePopup
                 isOpen={isEditProfilePopupOpen}
                 onClose={closeAllPopups}

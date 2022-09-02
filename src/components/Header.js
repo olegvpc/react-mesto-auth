@@ -1,24 +1,31 @@
 import logoPath from "../images/logo.svg";
-// import { useLocation } from 'react-router';
-import { useState } from "react";
-
+import { useLocation, Link } from 'react-router-dom';
+import { useState, useEffect } from "react";
 
 // import logoReactPath from "../images/logo-react.svg"
 
-function Header ({ isWrapped, children }) {
-    // const location = useLocation()
+function Header ({ userEmailOnHeader, onSignOut, loggedIn }) {
+    const location = useLocation()
 
     const [isMenuOpened, setIsMenuOpened] = useState(false);
+    // const [isWrapped, setIsWrapped] = useState(false)
 
-    // useEffect(() => {
-    //     console.log(isMenuOpened)
-    // }, [isMenuOpened])
+
+    useEffect(() => {
+        // if (location.pathname === "/") {
+        //     setIsWrapped(true)
+        // } else {
+        //     setIsWrapped(false)
+        // }
+        console.log(isMenuOpened)
+
+    }, [isMenuOpened, location.pathname])
 
       function handleOpenInfo() {
         setIsMenuOpened((prev) => !prev);
       }
     return (
-        <div className={isWrapped && 'add-wrapped-class'}>
+        <div className={loggedIn && 'add-wrapped-class'}>
             <header className={`page__header header ${!isMenuOpened && "header__navs_closed"}`}>
 
                 <div className="header__wrapped-logo">
@@ -33,8 +40,30 @@ function Header ({ isWrapped, children }) {
                     />
                 </div>
 
+
                 <div className="header__navs">
-                    {children}
+                    <p className="header__navs_link header__navs_email">
+                    {location.pathname === "/" ? userEmailOnHeader : ""}
+                    </p>
+                    <Link to={
+                    location.pathname === "/sign-up"
+                    ? "/sign-in"
+                    : location.pathname === "/sign-in"
+                    ? "/sign-up"
+                    : "/sign-in"
+                    }
+                    className={`header__navs_link transition ${loggedIn && "header__navs_logout"}`}
+                    onClick={location.pathname === "/" ? onSignOut : () => {}}
+                    >
+                    {
+                      location.pathname === "/sign-up"
+                      ? "Войти"
+                      : location.pathname === "/sign-in"
+                      ? "Регистрация"
+                      : "Выйти"
+                    }
+                    </Link>
+                    {/*{children}*/}
                 </div>
 
            </header>
